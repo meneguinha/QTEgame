@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QTE Fight Showdown - Proof of Concept</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Cinzel:wght@700;900&family=Share+Tech+Mono&family=Teko:wght@500;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="game-container">
+    <!-- Video Player Duplo Cinemático (Transições Seamless) -->
+    <div id="video-container">
+      <video id="videoA" class="game-video active" playsinline preload="auto" muted></video>
+      <video id="videoB" class="game-video" playsinline preload="auto" muted></video>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Barras cinematográficas widescreen -->
+    <div class="letterbox top"></div>
+    <div class="letterbox bottom"></div>
+
+    <!-- Vinheta e Overlay de Flash/Dano -->
+    <div id="vignette"></div>
+    <div id="flash-overlay"></div>
+    <div id="death-overlay"></div>
+
+    <!-- HUD do QTE Compacto e Superior (nunca sobrepõe os lutadores) -->
+    <div id="qte-hud" class="hidden">
+      <div class="qte-header">
+        <span class="qte-alert">QTE</span>
+        <div class="qte-counter">
+          <span id="step-dot-0" class="dot"></span>
+          <span id="step-dot-1" class="dot"></span>
+          <span id="step-dot-2" class="dot"></span>
+          <span id="step-dot-3" class="dot"></span>
+        </div>
+        <span class="qte-action-label" id="qte-action-label">HIGH BLOCK</span>
+      </div>
+
+      <!-- Faixas de Timing: a faixa 2 só aparece nos golpes de tecla dupla -->
+      <div class="qte-lanes">
+        <div class="qte-row" id="qte-lane-0">
+          <div class="qte-key-box" id="qte-key-box">
+            <span id="qte-target-key" class="qte-key-label">W</span>
+          </div>
+
+          <div class="timing-meter-container" id="meter-container-0">
+            <div class="meter-track" id="meter-track">
+              <div class="sweet-zone" id="sweet-zone"></div>
+              <div class="meter-fill" id="meter-fill"></div>
+              <div class="meter-needle" id="meter-needle"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="qte-row hidden" id="qte-lane-1">
+          <div class="qte-key-box" id="qte-key-box-2">
+            <span id="qte-target-key-2" class="qte-key-label">S</span>
+          </div>
+
+          <div class="timing-meter-container" id="meter-container-1">
+            <div class="meter-track" id="meter-track-2">
+              <div class="sweet-zone" id="sweet-zone-2"></div>
+              <div class="meter-fill" id="meter-fill-2"></div>
+              <div class="meter-needle" id="meter-needle-2"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Golpe de sequência: fileira de teclas, sem barras -->
+      <div id="qte-sequence" class="qte-sequence hidden"></div>
+
+      <!-- Feedback de Julgamento (PERFECT / TOO EARLY / TOO LATE) -->
+      <div id="qte-feedback" class="feedback-text"></div>
+    </div>
+
+    <!-- Overlay de Início da Cena: terminal de combate Cyberdyne -->
+    <div id="start-screen" class="screen-overlay">
+      <div class="crt-scanlines"></div>
+
+      <div class="screen-content">
+        <!-- Cabeçalho de sistema -->
+        <div class="term-bar">
+          <span class="term-id">CYBERDYNE SYSTEMS</span>
+          <span class="term-sep"></span>
+          <span class="term-threat">THREAT <b>CRITICAL</b></span>
+        </div>
+
+        <div class="hazard-strip"></div>
+
+        <!-- Cartaz do confronto -->
+        <div class="title-block">
+          <p class="title-kicker">DATACENTER NODE 07 &nbsp;//&nbsp; 03:14</p>
+
+          <h1 class="game-title">
+            <span class="title-line" data-text="RESEARCHER">RESEARCHER</span>
+            <span class="title-vs">VS</span>
+            <span class="title-line title-line-red" data-text="ROGUE AI">ROGUE AI</span>
+          </h1>
+
+          <p class="subtitle">Combat simulation &nbsp;//&nbsp; Quick Time Event</p>
+        </div>
+
+        <!-- Briefing em terminal -->
+        <div class="instructions-panel">
+          <h3>&gt; COMBAT BRIEFING<span class="term-caret"></span></h3>
+          <p>The AI robot has gone rogue inside the datacenter. Execute the counterattacks with precision.</p>
+          <p class="key-sequence">
+            <span class="kbd">W</span><span class="key-arrow">&rsaquo;</span><span class="kbd">D</span><span class="key-arrow">&rsaquo;</span><span class="kbd">W</span><span class="kbd-plus">+</span><span class="kbd">S</span><span class="key-arrow">&rsaquo;</span><span class="kbd kbd-final">8&times;</span>
+          </p>
+          <ul>
+            <li><strong>PRESS AND HOLD</strong> the key shown to charge the bar.</li>
+            <li><strong>RELEASE</strong> the key exactly when it lands inside the <strong>GREEN ZONE</strong>.</li>
+            <li><strong>WARNING</strong>: the longer you take to react, the more the bar and the green zone shrink.</li>
+            <li>The <strong>3rd strike</strong> takes <strong>two keys, W and S</strong>, each with its own bar and green zone. Hold both together or handle one at a time &mdash; just land both.</li>
+            <li>The <strong>4th strike is different</strong>: no bar, no holding. Hammer the sequence <strong>W S S S A S W D</strong> in order before the clock runs out.</li>
+            <li>Release too early, hold too long, or miss: <em>THE ROBOT WINS</em>.</li>
+          </ul>
+        </div>
+
+        <button id="btn-start" class="btn-action">
+          <span class="btn-label">START COMBAT</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Overlay de Game Over (Morte do Protagonista) -->
+    <div id="gameover-screen" class="screen-overlay hidden">
+      <div class="screen-content">
+        <h1 class="death-title">YOU DIED</h1>
+        <p class="death-reason" id="death-reason">Combat reflex failure.</p>
+        <div class="death-details" id="death-details"></div>
+        <button id="btn-retry" class="btn-action btn-danger">TRY AGAIN</button>
+      </div>
+    </div>
+
+    <!-- Overlay de Vitória -->
+    <div id="victory-screen" class="screen-overlay hidden">
+      <div class="screen-content">
+        <h1 class="victory-title">PERFECT EXECUTION</h1>
+        <p class="victory-subtitle">Devastating counterattack completed successfully!</p>
+        <div class="stats-panel" id="stats-panel">
+          <!-- Estatísticas de cada tecla preenchidas via JS -->
+        </div>
+        <button id="btn-restart" class="btn-action btn-success">PLAY AGAIN</button>
+      </div>
+    </div>
+
+    <!-- Trilha Sonora do Confronto (loop contínuo) -->
+    <audio id="bgm" src="Weight_of_the_Crown.mp3" loop preload="auto"></audio>
+
+    <!-- Indicador de Status do Áudio e Teclas Atuais -->
+    <div id="audio-hint">Press any key or click to enable audio</div>
+    <div id="debug-keys" class="hidden"></div>
+  </div>
+
+  <script src="js/audio.js"></script>
+  <script src="js/particles.js"></script>
+  <script src="js/qte.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
